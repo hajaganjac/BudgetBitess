@@ -4,12 +4,12 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
 
-function figmaAssetResolver() {
+function assetResolver() {
   return {
-    name: 'figma-asset-resolver',
+    name: 'asset-resolver',
     resolveId(id) {
-      if (id.startsWith('figma:asset/')) {
-        const filename = id.replace('figma:asset/', '')
+      if (id.startsWith('asset/')) {
+        const filename = id.replace('asset/', '')
         return path.resolve(__dirname, 'src/assets', filename)
       }
     },
@@ -18,7 +18,7 @@ function figmaAssetResolver() {
 
 export default defineConfig({
   plugins: [
-    figmaAssetResolver(),
+    assetResolver(),
     react(),
     tailwindcss(),
   ],

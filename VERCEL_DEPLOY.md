@@ -120,7 +120,7 @@ Your app will be available at:
 - [ ] All files committed to git
 - [ ] `pnpm install` works locally
 - [ ] `pnpm build` succeeds locally
-- [ ] No `figma:` imports in source code
+- [ ] No unused asset imports in source code
 - [ ] React & ReactDOM in dependencies (not peer)
 - [ ] `index.html` in root directory
 - [ ] `src/main.tsx` exists
