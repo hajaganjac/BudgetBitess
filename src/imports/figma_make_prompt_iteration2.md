@@ -1,5 +1,5 @@
 # BudgetBites — Iteration 2 Build Specification
-*(Prompt for Claude Opus 4.7 in Figma Make)*
+*(Build Specification for Figma Make)*
 
 ## 0. Mission
 
