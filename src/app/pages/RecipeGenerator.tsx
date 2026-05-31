@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { UtensilsCrossed, Sprout, Salad, BadgeCheck, ArrowRight, X } from 'lucide-react';
+import { UtensilsCrossed, Sprout, Salad, BadgeCheck, ArrowRight, X, RefreshCw, ChefHat } from 'lucide-react';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/BBCard';
 import { Button } from '../components/ui/BBButton';
 import { Chip } from '../components/ui/Chip';
 import { GeneratorStep } from '../components/features/GeneratorStep';
+import { RecipeCard } from '../components/features/RecipeCard';
+import { useApp } from '../context/AppContext';
+import type { Recipe, DietTag } from '../data/mockData';
 
 const PRESETS = [
   { label: 'Super cheap (≤€1)', value: 1 },
@@ -22,11 +25,27 @@ const DIETS = [
 
 const QUICK = ['rice', 'lentils', 'tomatoes', 'chicken', 'cheese', 'bread', 'oats', 'milk'];
 
+const DIET_MAP: Record<string, DietTag | null> = {
+  none: null,
+  vegan: 'Vegan',
+  veg: 'Vegetarian',
+  halal: 'Halal',
+};
+
+function scoreRecipe(recipe: Recipe, kitchenItems: string[]): number {
+  if (kitchenItems.length === 0) return 0;
+  const ingredientText = recipe.ingredients.join(' ').toLowerCase();
+  return kitchenItems.filter(item => ingredientText.includes(item)).length;
+}
+
 export function RecipeGenerator() {
+  const { recipes } = useApp();
   const [budget, setBudget] = useState(3);
   const [diet, setDiet] = useState('none');
   const [kitchen, setKitchen] = useState<string[]>(['eggs', 'pasta', 'garlic', 'onions']);
   const [input, setInput] = useState('');
+  const [results, setResults] = useState<Recipe[] | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const addIngredient = (n: string) => {
     const v = n.trim().toLowerCase();
@@ -35,6 +54,30 @@ export function RecipeGenerator() {
   };
 
   const remove = (n: string) => setKitchen(k => k.filter(i => i !== n));
+
+  const generate = () => {
+    setIsGenerating(true);
+    // Small delay for UX feel
+    setTimeout(() => {
+      const dietTag = DIET_MAP[diet];
+
+      let filtered = recipes.filter(r => r.price <= budget);
+
+      if (dietTag) {
+        filtered = filtered.filter(r => r.dietary.includes(dietTag));
+      }
+
+      // Score by kitchen ingredient matches and sort best-first
+      const scored = filtered.map(r => ({ recipe: r, score: scoreRecipe(r, kitchen) }));
+      scored.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.recipe.price - b.recipe.price; // cheaper first as tiebreaker
+      });
+
+      setResults(scored.map(s => s.recipe));
+      setIsGenerating(false);
+    }, 600);
+  };
 
   return (
     <div>
@@ -110,10 +153,55 @@ export function RecipeGenerator() {
           )}
         </GeneratorStep>
 
-        <Button variant="primary" size="lg" full>
-          Generate my recipes <ArrowRight size={16} />
+        <Button variant="primary" size="lg" full onClick={generate} disabled={isGenerating}>
+          {isGenerating ? (
+            <><RefreshCw size={16} className="animate-spin" /> Generating...</>
+          ) : (
+            <>Generate my recipes <ArrowRight size={16} /></>
+          )}
         </Button>
       </Card>
+
+      {/* Results */}
+      {results !== null && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-[18px] font-semibold tracking-[-0.01em]">
+                {results.length > 0
+                  ? `We found ${results.length} recipe${results.length === 1 ? '' : 's'} for you`
+                  : 'No recipes found'}
+              </h2>
+              <p className="text-[13px] text-[color:var(--color-text-secondary)] mt-1">
+                {results.length > 0
+                  ? `Under €${budget.toFixed(2)} · ${diet === 'none' ? 'All diets' : DIETS.find(d => d.id === diet)?.name} · Sorted by kitchen match`
+                  : 'Try increasing your budget or changing your dietary preference'}
+              </p>
+            </div>
+            {results.length > 0 && (
+              <Button variant="cool" onClick={generate}>
+                <RefreshCw size={14} /> Regenerate
+              </Button>
+            )}
+          </div>
+
+          {results.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {results.map(r => (
+                <RecipeCard key={r.id} recipe={r} />
+              ))}
+            </div>
+          ) : (
+            <Card className="p-12 text-center">
+              <ChefHat size={48} className="mx-auto text-[color:var(--color-text-tertiary)] mb-4" />
+              <p className="text-[15px] font-semibold">No matching recipes</p>
+              <p className="text-[13px] text-[color:var(--color-text-secondary)] mt-2">
+                Try a higher budget, fewer diet restrictions, or different ingredients.
+              </p>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }
